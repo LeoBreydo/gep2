@@ -1,0 +1,9 @@
+[package]
+name = "gep2-driver"
+version = "0.1.0"
+edition = "2021"
+
+
+[dependencies]
+gep2-lib = { path = "../gep2-lib" }
+rand = "0.8.4"
