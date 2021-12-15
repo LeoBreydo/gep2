@@ -43,6 +43,16 @@ pub const REGISTRY: &'static [FunctionDescription] = &[
 
 pub const FN_NUM: usize = 4;
 
+pub struct Function{
+    pub fd: &'static FunctionDescription,
+    pub first_arg_position:usize
+}
+impl Function{
+    pub fn new(fd: &'static FunctionDescription) -> Self{
+        Function{ fd, first_arg_position:0 }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
