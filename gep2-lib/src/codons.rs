@@ -49,10 +49,10 @@ impl Codon{
     pub fn evaluate(&mut self, x: f32, y: f32, args: &Vec<f32>) -> f32 {
         match self{
             Codon::Function(ref f) => (f.fd.op)(x,y),
-            Codon::Delay(ref mut d) => d.Do(x),
-            Codon::Collector(ref mut c) => c.Do(x),
-            Codon::Diff(ref mut d) => d.Do(x),
-            Codon::Terminal(ref mut t) => t.Do(args)
+            Codon::Delay(ref mut d) => d.eval(x),
+            Codon::Collector(ref mut c) => c.eval(x),
+            Codon::Diff(ref mut d) => d.eval(x),
+            Codon::Terminal(ref mut t) => t.eval(args)
         }
     }
 }

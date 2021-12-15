@@ -11,7 +11,7 @@ impl Delay{
             symbol: "Delay"
         }
     }
-    pub fn Do(&mut self, x:f32) -> f32{
+    pub fn eval(&mut self, x:f32) -> f32{
         let ret = self.buf;
         self.buf = x;
         ret
@@ -30,7 +30,7 @@ impl Collector {
             symbol: "Collect"
         }
     }
-    pub fn Do(&mut self, x:f32) -> f32{
+    pub fn eval(&mut self, x:f32) -> f32{
         let mut temp = self.buf + x;
         self.buf = if temp > 1.0 {1.0} else if temp < -1.0 {-1.0} else {temp};
         self.buf
@@ -49,7 +49,7 @@ impl Diff{
             symbol: "Diff"
         }
     }
-    pub fn Do(&mut self, x:f32) -> f32{
+    pub fn eval(&mut self, x:f32) -> f32{
         let mut temp = x - self.buf;
         self.buf = if temp > 1.0 {1.0} else if temp < -1.0 {-1.0} else {temp};
         self.buf
@@ -63,8 +63,8 @@ mod tests {
     #[test]
     fn delay_test() {
         let mut d = Delay::new();
-        let x1 = d.Do(1.0);
-        let x2 = d.Do(0.0);
+        let x1 = d.eval(1.0);
+        let x2 = d.eval(0.0);
         assert_eq!(0.0, x1);
         assert_eq!(1.0, x2);
     }
@@ -72,9 +72,9 @@ mod tests {
     #[test]
     fn collector_test() {
         let mut d = Collector::new();
-        let x1 = d.Do(1.0);
-        let x2 = d.Do(1.0);
-        let x3 = d.Do(-1.0);
+        let x1 = d.eval(1.0);
+        let x2 = d.eval(1.0);
+        let x3 = d.eval(-1.0);
         assert_eq!(1.0, x1);
         assert_eq!(1.0, x2);
         assert_eq!(0.0, x3);
@@ -83,9 +83,9 @@ mod tests {
     #[test]
     fn diff_test() {
         let mut d = Diff::new();
-        let x1 = d.Do(1.0);
-        let x2 = d.Do(1.0);
-        let x3 = d.Do(-1.0);
+        let x1 = d.eval(1.0);
+        let x2 = d.eval(1.0);
+        let x3 = d.eval(-1.0);
         assert_eq!(1.0, x1);
         assert_eq!(0.0, x2);
         assert_eq!(-1.0, x3);

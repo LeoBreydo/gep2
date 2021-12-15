@@ -5,28 +5,22 @@ pub struct FunctionDescription {
     pub op : fn(f32, f32) -> f32
 }
 
-pub fn mi(x: f32, y: f32) -> f32{
-    f32::min(x, y)
-}
-pub fn ma(x: f32, y: f32) -> f32{
-    f32::max(x, y)
-}
 pub fn av(x: f32, y: f32) -> f32{
     (x+y)/2.0
 }
 pub fn ne(x: f32, _y: f32) -> f32{
-    -1.0*x
+    -x
 }
 
 pub const REGISTRY: &'static [FunctionDescription] = &[
     FunctionDescription {
         arity: 2,
-        op: mi,
+        op: f32::min,
         symbol: "Min"
     },
     FunctionDescription {
         arity: 2,
-        op: ma,
+        op: f32::max,
         symbol: "Max"
     },
     FunctionDescription {
