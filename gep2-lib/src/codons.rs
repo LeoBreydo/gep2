@@ -14,9 +14,9 @@ impl Clone for Codon {
     fn clone(&self) -> Self {
         match self {
             Codon::Function(ref f) => Codon::Function(Function::new(f.fd)),
-            Codon::Delay(ref d) => Codon::Delay(Delay::new()),
-            Codon::Collector(ref c) => Codon::Collector(Collector::new()),
-            Codon::Diff(ref d) => Codon::Diff(Diff::new()),
+            Codon::Delay(ref _d) => Codon::Delay(Delay::new()),
+            Codon::Collector(ref _c) => Codon::Collector(Collector::new()),
+            Codon::Diff(ref _d) => Codon::Diff(Diff::new()),
             Codon::Terminal(ref t) => Codon::Terminal(Terminal::new(t.i)),
         }
     }

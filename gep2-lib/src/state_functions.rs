@@ -31,7 +31,7 @@ impl Collector {
         }
     }
     pub fn eval(&mut self, x:f32) -> f32{
-        let mut temp = self.buf + x;
+        let temp = self.buf + x;
         self.buf = if temp > 1.0 {1.0} else if temp < -1.0 {-1.0} else {temp};
         self.buf
     }
@@ -50,11 +50,13 @@ impl Diff{
         }
     }
     pub fn eval(&mut self, x:f32) -> f32{
-        let mut temp = x - self.buf;
+        let temp = x - self.buf;
         self.buf = if temp > 1.0 {1.0} else if temp < -1.0 {-1.0} else {temp};
         self.buf
     }
 }
+
+pub const SFN_NUM: usize = 3;
 
 #[cfg(test)]
 mod tests {
