@@ -1,5 +1,5 @@
-use rand::prelude::ThreadRng;
-use rand::Rng;
+//use rand::prelude::ThreadRng;
+//use rand::Rng;
 use gep2_lib::chromosome::{Chromosome};
 
 fn main() {
@@ -13,7 +13,7 @@ fn main() {
     // dbg!(&chr[0].k_string());
     // dbg!(&chr[1].k_string());
 
-    let mut chromosome = Chromosome::new(&mut rg,3,3,5);
+    let chromosome = Chromosome::new(&mut rg,3,3,5);
     dbg!(chromosome.k_string());
 
     let mut chromosome = chromosome.mutation(&mut rg,5,0.14);

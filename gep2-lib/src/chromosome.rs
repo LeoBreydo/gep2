@@ -14,15 +14,15 @@ pub struct Chromosome{
     pub fitness: f32,
 }
 impl Chromosome{
-    pub fn new(mut rng: &mut ThreadRng, mut geneNbr:usize,  mut headLength: usize, mut varNbr:usize) -> Self{
-        if geneNbr < 1 {geneNbr = 1}
-        if headLength < 1 {headLength = 1}
-        if varNbr < 1 {varNbr = 1}
+    pub fn new(mut rng: &mut ThreadRng, mut gene_nbr:usize, mut head_length: usize, mut args_nbr:usize) -> Self{
+        if gene_nbr < 1 { gene_nbr = 1}
+        if head_length < 1 { head_length = 1}
+        if args_nbr < 1 { args_nbr = 1}
 
-        let gl = 2*headLength + 1;
-        let mut codons: Vec<Codon> = Vec::with_capacity(geneNbr*gl);
-        Self::initialize_codons(&mut rng, &mut codons, geneNbr, headLength, varNbr);
-        Chromosome { codons, head_size:headLength, nbr_of_genes:geneNbr, fitness:0.0 }
+        let gl = 2* head_length + 1;
+        let mut codons: Vec<Codon> = Vec::with_capacity(gene_nbr *gl);
+        Self::initialize_codons(&mut rng, &mut codons, gene_nbr, head_length, args_nbr);
+        Chromosome { codons, head_size: head_length, nbr_of_genes: gene_nbr, fitness:0.0 }
     }
     fn initialize_codons(mut rng: &mut ThreadRng, mut arr: &mut Vec<Codon>, gn:usize, hl:usize, na:usize){
         let gl = 2*hl+1;
@@ -83,7 +83,7 @@ impl Chromosome{
     }
 
     // genetic operations
-    pub fn mutation(&self, mut rng: &mut ThreadRng, args_nbr:usize, mut codon_mutation_probability: f32) -> Chromosome{
+    pub fn mutation(&self, rng: &mut ThreadRng, args_nbr:usize, codon_mutation_probability: f32) -> Chromosome{
         let glen = self.head_size*2+1;
         // codons for mutated chromosome
         let mut codons: Vec<Codon> = Vec::with_capacity(self.codons.len());
@@ -101,7 +101,7 @@ impl Chromosome{
                 if rng.gen_range(0.0..1.0) < codon_mutation_probability{
                     let r = rng.gen::<usize>() % 10;
                     if r < 2 {
-                        codons.push((Codon::Terminal(Terminal::new(rng.gen::<usize>() % args_nbr))));
+                        codons.push(Codon::Terminal(Terminal::new(rng.gen::<usize>() % args_nbr)));
                     } else {
                         codons.push(Self::create_non_terminal(rng));
                     }
@@ -113,7 +113,7 @@ impl Chromosome{
             //mutate tail
             for j in start + self.head_size..start + glen {
                 if rng.gen_range(0.0..1.0) < codon_mutation_probability{
-                    codons.push((Codon::Terminal(Terminal::new(rng.gen::<usize>() % args_nbr))));
+                    codons.push(Codon::Terminal(Terminal::new(rng.gen::<usize>() % args_nbr)));
                 }
                 else{
                     codons.push(self.codons[j].clone());
@@ -126,40 +126,39 @@ impl Chromosome{
         let test = rng.gen_range(0.0..1.0);
         if test >= transposition_probability {return;}
         let glen = self.head_size*2+1;
-        // insert starting from position of first codon of random gene
-        let mut ip = glen * (rng.gen::<usize>() % self.nbr_of_genes);
-
-        // try to find transposon bounds [start:end]
-        let len = self.codons.len();
-        let mut start = rng.gen::<usize>() % len;
-        let mut end = start + rng.gen::<usize>() % (len);
-        if end >= len {end = len-1;}
-        // try to find first occurrence of a non-terminal in a given transposon
-        // gene cannot start with a terminal
+        // 1) select target gene
+        let target_gene = rng.gen::<usize>() % self.nbr_of_genes;
+        let mut ip = glen * target_gene;
+        // 2) select source gene
+        let source_gene = rng.gen::<usize>() % self.nbr_of_genes;
+        let ss = glen * source_gene; // source gene head start
+        // 3) select starting point of transposon (within head of source gene)
+        let mut starting_point = rng.gen::<usize>() % self.head_size + ss;
+        //  3.1) if starting point is a root of target gene - move starting point forward, to next codon
+        if starting_point == ip {starting_point += 1}
+        let se = ss + self.head_size; // source gene tail start
+        // try to move starting_point to position of first occurrence of a non-terminal in a given transposon
+        // because after transposition modified gene cannot start with a terminal
         loop{
-            match self.codons[start]{
-                Codon::Terminal(ref t) => start += 1,
+            match self.codons[starting_point]{
+                Codon::Terminal(ref _t) => starting_point += 1,
                 _ => break,
             }
             // only terminals found -> no transposition
-            if start > end {
+            if starting_point == se {
                 // println!("only terminals found -> no transposition");
                 return;
             }
-        };
-        // max transposon length equals length of head
-        let cnt = end-start+1;
-        if cnt > self.head_size {end = start+self.head_size-1;}
-        // dbg!(start);
-        // dbg!(end);
-        // dbg!(ip);
-        // actual transposition here
-        let mut temp_buffer: Vec<Codon> = Vec::with_capacity(end-start+1);
-        for i in start..end+1{
-            temp_buffer.push(self.codons[i].clone());
         }
-        for i in 0..temp_buffer.len(){
-            self.codons[ip] = temp_buffer[i].clone();
+        // 4) select transposon end point (between starting point and end of head of source gene - transposon must not cross head/tail border)
+        let end_point = starting_point + rng.gen::<usize>() % (se - starting_point);
+        // dbg!(starting_point);
+        // dbg!(end_point);
+        // dbg!(ip);
+        // 5) clone transposon starting with a root of target gene
+        // because of restriction applied to length of transposon, we can clone codons directly, without using temporary buffer
+        for i in starting_point..end_point+1{
+            self.codons[ip] = self.codons[i].clone();
             ip += 1;
         }
     }
@@ -175,8 +174,8 @@ impl Chromosome{
         // dbg!(start);
         // dbg!(end);
         let (a, b) = chrs.split_at_mut(i2);
-        let mut p1 = &mut a[i1];
-        let mut p2 = &mut b[0];
+        let p1 = &mut a[i1];
+        let p2 = &mut b[0];
         for i in start..end+1{
             let (x, y) = (p2.codons[i].clone(), p1.codons[i].clone());
             p1.codons[i] = x;

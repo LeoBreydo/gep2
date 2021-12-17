@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 mod functions;
 mod state_functions;
 mod terminal;
