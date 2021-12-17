@@ -6,7 +6,7 @@ use crate::linking_function::LF;
 use crate::state_functions::{Collector, Delay, Diff, SFN_NUM};
 use crate::terminal::Terminal;
 
-pub struct Chromosome{
+pub struct Chromosome {
     head_size:usize,
     nbr_of_genes:usize,
 
@@ -24,14 +24,14 @@ impl Chromosome{
         Self::initialize_codons(&mut rng, &mut codons, gene_nbr, head_length, args_nbr);
         Chromosome { codons, head_size: head_length, nbr_of_genes: gene_nbr, fitness:0.0 }
     }
-    fn initialize_codons(mut rng: &mut ThreadRng, mut arr: &mut Vec<Codon>, gn:usize, hl:usize, na:usize){
+    fn initialize_codons(mut rng: &mut ThreadRng, arr: &mut Vec<Codon>, gn:usize, hl:usize, na:usize){
         let gl = 2*hl+1;
         for i in 0..gn{
             let start = i*gl;
             // first codon in gene must be non-terminal
             arr.push(Self::create_non_terminal(rng));
             for _j in start+1..start+hl{
-                Self::push_head_codon(&mut rng, &mut arr, na);
+                Self::push_head_codon(&mut rng, arr, na);
             }
             for _j in start+hl..start+gl{
                 arr.push(Codon::Terminal(Terminal::new(rng.gen::<usize>() % na)));
@@ -62,6 +62,24 @@ impl Chromosome{
         c
     }
 
+    pub fn translate(&mut self){
+        let glen = 2*self.head_size+1;
+        for i in 0..self.nbr_of_genes{
+            let idx = i*glen;
+            Self::first_pass(&mut self.codons,idx);
+        }
+    }
+
+    pub fn evaluate(&mut self, args: &Vec<f32>) -> f32 {
+        let glen = 2*self.head_size+1;
+        let mut results: Vec<f32> = Vec::with_capacity(self.nbr_of_genes);
+        for i in 0..self.nbr_of_genes{
+            let idx = i*glen;
+            results.push(Self::calc(&mut self.codons, idx, &args));
+        }
+        LF.evaluate(results)
+    }
+
     pub fn k_string(&self) ->String{
         let len = self.head_size*2+1;
         let mut ret = String::new();
@@ -73,7 +91,7 @@ impl Chromosome{
                 let c = &self.codons[j];
                 match c {
                     Codon::Terminal(ref t) => ret.push_str(&t.i.to_string()),
-                    _ => ret.push_str(c.get_symbol())
+                    _ => ret.push_str(&c.get_symbol())
                 }
                 ret.push('|');
             }
@@ -180,6 +198,41 @@ impl Chromosome{
             let (x, y) = (p2.codons[i].clone(), p1.codons[i].clone());
             p1.codons[i] = x;
             p2.codons[i] = y;
+        }
+    }
+
+    // translation/execution
+    fn first_pass(codons: &mut [Codon], p:usize) {
+        let mut pos = p;
+        let mut first_arg_position:usize = p+1;
+        loop {
+            let current = &mut(codons[pos]);
+            current.set_first_arg_position(first_arg_position);
+            first_arg_position += usize::from(current.get_arity());
+            pos += 1;
+            if pos == first_arg_position {
+                break;
+            }
+        };
+    }
+    fn calc(codons: &mut Vec<Codon>, pos:usize, args: &Vec<f32>) -> f32 {
+        let c = & mut codons[pos];
+        let p = c.get_first_arg_position();
+        return match c {
+            Codon::Terminal(ref t) => args[t.i],
+            _ => {
+                    if c.get_arity() == 1 {
+                        let k = Self::calc(codons, p,args);
+                        let c = & mut codons[pos];
+                        c.evaluate (k, 0.0, args)
+                    }
+                    else {
+                        let k = Self::calc(codons, p,args);
+                        let kk = Self::calc(codons, p+1,args);
+                        let c = & mut codons[pos];
+                        c.evaluate(k, kk, args)
+                    }
+            }
         }
     }
 }

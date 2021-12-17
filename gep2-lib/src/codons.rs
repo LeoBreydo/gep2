@@ -46,9 +46,27 @@ impl Codon{
         }
 
     }
+    pub fn set_first_arg_position(&mut self, pos:usize) {
+        match self{
+            Codon::Function(ref mut f) => f.first_arg_position = pos,
+            Codon::Delay(ref mut f) => f.first_arg_position = pos,
+            Codon::Collector(ref mut f) => f.first_arg_position = pos,
+            Codon::Diff(ref mut f) => f.first_arg_position = pos,
+            _ => { },
+        }
+    }
+    pub fn get_first_arg_position(&self) -> usize{
+        match self{
+            Codon::Function(ref f) => f.first_arg_position,
+            Codon::Delay(ref f) => f.first_arg_position,
+            Codon::Collector(ref f) => f.first_arg_position,
+            Codon::Diff(ref f) => f.first_arg_position,
+            _ => 0,
+        }
+    }
     pub fn evaluate(&mut self, x: f32, y: f32, args: &Vec<f32>) -> f32 {
         match self{
-            Codon::Function(ref f) => (f.fd.op)(x,y),
+            Codon::Function(ref mut f) => (f.fd.op)(x,y),
             Codon::Delay(ref mut d) => d.eval(x),
             Codon::Collector(ref mut c) => c.eval(x),
             Codon::Diff(ref mut d) => d.eval(x),

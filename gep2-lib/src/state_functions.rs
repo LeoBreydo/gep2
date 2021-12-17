@@ -31,13 +31,13 @@ impl Collector {
         }
     }
     pub fn eval(&mut self, x:f32) -> f32{
-        let temp = self.buf + x;
-        self.buf = if temp > 1.0 {1.0} else if temp < -1.0 {-1.0} else {temp};
-        self.buf
+        let temp = (self.buf + x)/2.0;
+        self.buf = x;
+        if temp > 1.0 {1.0} else if temp < -1.0 {-1.0} else {temp}
     }
 }
 pub struct Diff {
-    pub buf: f32,
+    pub buf:f32,
     pub first_arg_position:usize,
     pub symbol:  &'static str,
 }
@@ -51,8 +51,8 @@ impl Diff{
     }
     pub fn eval(&mut self, x:f32) -> f32{
         let temp = x - self.buf;
-        self.buf = if temp > 1.0 {1.0} else if temp < -1.0 {-1.0} else {temp};
-        self.buf
+        self.buf = x;
+        if temp > 1.0 {1.0} else if temp < -1.0 {-1.0} else {temp}
     }
 }
 
@@ -74,10 +74,10 @@ mod tests {
     #[test]
     fn collector_test() {
         let mut d = Collector::new();
-        let x1 = d.eval(1.0);
-        let x2 = d.eval(1.0);
-        let x3 = d.eval(-1.0);
-        assert_eq!(1.0, x1);
+        let x1 = d.eval(1.0); // 0.5
+        let x2 = d.eval(1.0); // 1
+        let x3 = d.eval(-1.0); // 0
+        assert_eq!(0.5, x1);
         assert_eq!(1.0, x2);
         assert_eq!(0.0, x3);
     }
@@ -85,9 +85,9 @@ mod tests {
     #[test]
     fn diff_test() {
         let mut d = Diff::new();
-        let x1 = d.eval(1.0);
-        let x2 = d.eval(1.0);
-        let x3 = d.eval(-1.0);
+        let x1 = d.eval(1.0); // 1
+        let x2 = d.eval(1.0); // 0
+        let x3 = d.eval(-1.0); // -1
         assert_eq!(1.0, x1);
         assert_eq!(0.0, x2);
         assert_eq!(-1.0, x3);
