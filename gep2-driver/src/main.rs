@@ -1,5 +1,3 @@
-//use rand::prelude::ThreadRng;
-//use rand::Rng;
 use gep2_lib::chromosome::{Chromosome};
 
 fn main() {

@@ -1,3 +1,4 @@
+use std::cell::Cell;
 
 pub struct FunctionDescription {
     pub symbol : &'static str,
@@ -39,11 +40,12 @@ pub const FN_NUM: usize = 4;
 
 pub struct Function{
     pub fd: &'static FunctionDescription,
-    pub first_arg_position:usize
+    // to hide mutability
+    pub first_arg_position:Cell<usize>
 }
 impl Function{
     pub fn new(fd: &'static FunctionDescription) -> Self{
-        Function{ fd, first_arg_position:0 }
+        Function{ fd, first_arg_position:Cell::new(0) }
     }
 }
 

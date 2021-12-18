@@ -23,6 +23,7 @@ impl Clone for Codon {
 }
 
 impl Codon{
+    // no mutable references
     pub fn get_symbol(&self) -> &str {
         match self{
             Codon::Function(ref f) => f.fd.symbol,
@@ -46,31 +47,31 @@ impl Codon{
         }
 
     }
-    pub fn set_first_arg_position(&mut self, pos:usize) {
+    pub fn set_first_arg_position(&self, pos:usize) {
         match self{
-            Codon::Function(ref mut f) => f.first_arg_position = pos,
-            Codon::Delay(ref mut f) => f.first_arg_position = pos,
-            Codon::Collector(ref mut f) => f.first_arg_position = pos,
-            Codon::Diff(ref mut f) => f.first_arg_position = pos,
+            Codon::Function(ref f) => f.first_arg_position.set(pos),
+            Codon::Delay(ref f) => f.first_arg_position.set(pos),
+            Codon::Collector(ref f) => f.first_arg_position.set(pos),
+            Codon::Diff(ref f) => f.first_arg_position.set(pos),
             _ => { },
         }
     }
     pub fn get_first_arg_position(&self) -> usize{
         match self{
-            Codon::Function(ref f) => f.first_arg_position,
-            Codon::Delay(ref f) => f.first_arg_position,
-            Codon::Collector(ref f) => f.first_arg_position,
-            Codon::Diff(ref f) => f.first_arg_position,
+            Codon::Function(ref f) => f.first_arg_position.get(),
+            Codon::Delay(ref f) => f.first_arg_position.get(),
+            Codon::Collector(ref f) => f.first_arg_position.get(),
+            Codon::Diff(ref f) => f.first_arg_position.get(),
             _ => 0,
         }
     }
-    pub fn evaluate(&mut self, x: f32, y: f32, args: &Vec<f32>) -> f32 {
+    pub fn evaluate(&self, x: f32, y: f32, args: &Vec<f32>) -> f32 {
         match self{
-            Codon::Function(ref mut f) => (f.fd.op)(x,y),
-            Codon::Delay(ref mut d) => d.eval(x),
-            Codon::Collector(ref mut c) => c.eval(x),
-            Codon::Diff(ref mut d) => d.eval(x),
-            Codon::Terminal(ref mut t) => t.eval(args)
+            Codon::Function(ref f) => (f.fd.op)(x,y),
+            Codon::Delay(ref d) => d.eval(x),
+            Codon::Collector(ref c) => c.eval(x),
+            Codon::Diff(ref d) => d.eval(x),
+            Codon::Terminal(ref t) => t.eval(args)
         }
     }
 }

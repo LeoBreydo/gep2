@@ -1,6 +1,8 @@
+use std::cell::Cell;
 use rand::prelude::ThreadRng;
 use rand::Rng;
 use crate::codons::Codon;
+use crate::fitness_evaluator::FitnessEvaluator;
 use crate::functions::{FN_NUM, Function, REGISTRY};
 use crate::linking_function::LF;
 use crate::state_functions::{Collector, Delay, Diff, SFN_NUM};
@@ -11,9 +13,11 @@ pub struct Chromosome {
     nbr_of_genes:usize,
 
     pub codons: Vec<Codon>,
-    pub fitness: f32,
+    // to hide mutability
+    pub fitness: Cell<f32>,
 }
 impl Chromosome{
+    // initialization
     pub fn new(mut rng: &mut ThreadRng, mut gene_nbr:usize, mut head_length: usize, mut args_nbr:usize) -> Self{
         if gene_nbr < 1 { gene_nbr = 1}
         if head_length < 1 { head_length = 1}
@@ -22,7 +26,7 @@ impl Chromosome{
         let gl = 2* head_length + 1;
         let mut codons: Vec<Codon> = Vec::with_capacity(gene_nbr *gl);
         Self::initialize_codons(&mut rng, &mut codons, gene_nbr, head_length, args_nbr);
-        Chromosome { codons, head_size: head_length, nbr_of_genes: gene_nbr, fitness:0.0 }
+        Chromosome { codons, head_size: head_length, nbr_of_genes: gene_nbr, fitness:Cell::new(0.0) }
     }
     fn initialize_codons(mut rng: &mut ThreadRng, arr: &mut Vec<Codon>, gn:usize, hl:usize, na:usize){
         let gl = 2*hl+1;
@@ -62,24 +66,7 @@ impl Chromosome{
         c
     }
 
-    pub fn translate(&mut self){
-        let glen = 2*self.head_size+1;
-        for i in 0..self.nbr_of_genes{
-            let idx = i*glen;
-            Self::first_pass(&mut self.codons,idx);
-        }
-    }
-
-    pub fn evaluate(&mut self, args: &Vec<f32>) -> f32 {
-        let glen = 2*self.head_size+1;
-        let mut results: Vec<f32> = Vec::with_capacity(self.nbr_of_genes);
-        for i in 0..self.nbr_of_genes{
-            let idx = i*glen;
-            results.push(Self::calc(&mut self.codons, idx, &args));
-        }
-        LF.evaluate(results)
-    }
-
+    // helpers
     pub fn k_string(&self) ->String{
         let len = self.head_size*2+1;
         let mut ret = String::new();
@@ -138,7 +125,7 @@ impl Chromosome{
                 }
             }
         }
-        Chromosome { codons, head_size:self.head_size, nbr_of_genes:self.nbr_of_genes, fitness: 0.0 }
+        Chromosome { codons, head_size:self.head_size, nbr_of_genes:self.nbr_of_genes, fitness: Cell::new(0.0) }
     }
     pub fn root_transposition(&mut self, rng: &mut ThreadRng, transposition_probability : f32) {
         let test = rng.gen_range(0.0..1.0);
@@ -202,11 +189,39 @@ impl Chromosome{
     }
 
     // translation/execution
-    fn first_pass(codons: &mut [Codon], p:usize) {
+    pub fn translate(&'static self) -> Box<dyn Fn(&Vec<f32>) -> f32 + 'static>{
+        let glen = 2*self.head_size+1;
+        let cnt = self.nbr_of_genes;
+        // first pass
+        for i in 0..cnt{
+            let idx = i*glen;
+            self.first_pass(idx);
+        }
+        let mut results: Vec<Box<dyn Fn(&Vec<f32>) -> f32>> = Vec::with_capacity(cnt);
+        // second pass
+        for i in 0..cnt{
+            let idx = i*glen;
+            results.push(self.second_pass(idx));
+        }
+        Box::new(move |args| {
+            let mut v :Vec<f32> = Vec::with_capacity(cnt);
+            for i in 0..cnt{
+                v.push((results[i])(args))
+            }
+            LF.evaluate(v)
+        })
+    }
+    pub fn pass(&'static self, evaluator: &'static impl FitnessEvaluator) -> f32{
+        let func = self.translate();
+        let f = evaluator.evaluate(func);
+        self.fitness.set(f);
+        f
+    }
+    fn first_pass(&self, p:usize) {
         let mut pos = p;
         let mut first_arg_position:usize = p+1;
         loop {
-            let current = &mut(codons[pos]);
+            let current = &self.codons[pos];
             current.set_first_arg_position(first_arg_position);
             first_arg_position += usize::from(current.get_arity());
             pos += 1;
@@ -215,23 +230,22 @@ impl Chromosome{
             }
         };
     }
-    fn calc(codons: &mut Vec<Codon>, pos:usize, args: &Vec<f32>) -> f32 {
-        let c = &mut (codons[pos]);
-        match c {
-            Codon::Terminal(ref t) => args[t.i],
+    fn second_pass<'a>(&'a self, pos: usize) -> Box<dyn Fn(&Vec<f32>) -> f32 + 'a> {
+        let c = &self.codons[pos];
+        return match c {
+            Codon::Terminal(ref _t) => Box::new(move |args| c.evaluate(0.0, 0.0, args)),
             _ => {
-                    let p = c.get_first_arg_position();
-                    if c.get_arity() == 1 {
-                        let left = Self::calc(codons, p,args);
-                        // borrow checker is really boring :(
-                        (&mut  codons[pos]).evaluate (left, 0.0, args)
-                    }
-                    else {
-                        let left = Self::calc(codons, p,args);
-                        let right = Self::calc(codons, p+1,args);
-                        (&mut codons[pos]).evaluate(left, right, args)
-                    }
+                if c.get_arity() == 1{
+                    Box::new(move |args|
+                        c.evaluate(self.second_pass(c.get_first_arg_position())(args),
+                            0.0, args))
+                }
+                else{
+                    Box::new(move |args|
+                        c.evaluate(self.second_pass(c.get_first_arg_position())(args),
+                            self.second_pass(c.get_first_arg_position() +1)(args), args))
+                }
             }
-        }
+        };
     }
 }

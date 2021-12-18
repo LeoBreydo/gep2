@@ -9,7 +9,7 @@ impl Terminal{
             symbol: format!("args[{}]", i)
         }
     }
-    pub fn eval(&mut self, args: &Vec<f32>) -> f32 {
+    pub fn eval(&self, args: &Vec<f32>) -> f32 {
         let ret = args[self.i];
         if ret < -1.0 {-1.0} else if ret > 1.0 {1.0} else {ret}
     }

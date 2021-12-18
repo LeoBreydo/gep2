@@ -5,3 +5,4 @@ mod terminal;
 mod codons;
 pub mod chromosome;
 mod linking_function;
+mod fitness_evaluator;
