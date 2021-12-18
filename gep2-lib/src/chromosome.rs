@@ -216,21 +216,20 @@ impl Chromosome{
         };
     }
     fn calc(codons: &mut Vec<Codon>, pos:usize, args: &Vec<f32>) -> f32 {
-        let c = & mut codons[pos];
-        let p = c.get_first_arg_position();
-        return match c {
+        let c = &mut (codons[pos]);
+        match c {
             Codon::Terminal(ref t) => args[t.i],
             _ => {
+                    let p = c.get_first_arg_position();
                     if c.get_arity() == 1 {
-                        let k = Self::calc(codons, p,args);
-                        let c = & mut codons[pos];
-                        c.evaluate (k, 0.0, args)
+                        let left = Self::calc(codons, p,args);
+                        // borrow checker is really boring :(
+                        (&mut  codons[pos]).evaluate (left, 0.0, args)
                     }
                     else {
-                        let k = Self::calc(codons, p,args);
-                        let kk = Self::calc(codons, p+1,args);
-                        let c = & mut codons[pos];
-                        c.evaluate(k, kk, args)
+                        let left = Self::calc(codons, p,args);
+                        let right = Self::calc(codons, p+1,args);
+                        (&mut codons[pos]).evaluate(left, right, args)
                     }
             }
         }
