@@ -192,16 +192,18 @@ impl Chromosome{
     pub fn translate(&'static self) -> Box<dyn Fn(&Vec<f32>) -> f32 + 'static>{
         let glen = 2*self.head_size+1;
         let cnt = self.nbr_of_genes;
+        let mut idx = 0;
         // first pass
-        for i in 0..cnt{
-            let idx = i*glen;
+        for _i in 0..cnt{
             self.first_pass(idx);
+            idx += glen;
         }
         let mut results: Vec<Box<dyn Fn(&Vec<f32>) -> f32>> = Vec::with_capacity(cnt);
         // second pass
-        for i in 0..cnt{
-            let idx = i*glen;
+        idx = 0;
+        for _i in 0..cnt{
             results.push(self.second_pass(idx));
+            idx += glen;
         }
         Box::new(move |args| {
             let mut v :Vec<f32> = Vec::with_capacity(cnt);
