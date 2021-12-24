@@ -66,6 +66,16 @@ impl Chromosome{
         c
     }
 
+    pub fn copy_to_new_generation(&self) ->Chromosome{
+        let len = self.codons.len();
+        let mut codons: Vec<Codon> = Vec::with_capacity(len);
+        for i in 0.. self.codons.len(){
+            codons.push(self.codons[i].clone());
+        }
+        Chromosome { head_size: self.head_size, nbr_of_genes: self.nbr_of_genes, codons, fitness:Cell::new(0.0) }
+    }
+
+
     // helpers
     pub fn k_string(&self) ->String{
         let len = self.head_size*2+1;
@@ -189,7 +199,7 @@ impl Chromosome{
     }
 
     // translation/execution
-    pub fn translate(&'static self) -> Box<dyn Fn(&Vec<f32>) -> f32 + 'static>{
+    pub fn translate<'a>(&'a self) -> Box<dyn Fn(&Vec<f32>) -> f32 + 'a>{
         let glen = 2*self.head_size+1;
         let cnt = self.nbr_of_genes;
         let mut idx = 0;
@@ -213,10 +223,15 @@ impl Chromosome{
             LF.evaluate(v)
         })
     }
-    pub fn pass(&'static self, evaluator: &'static impl FitnessEvaluator) -> f32{
+    pub fn pass<'a>(&'a self, evaluator: &'a impl FitnessEvaluator) -> f32{
         let func = self.translate();
         let f = evaluator.evaluate(func);
         self.fitness.set(f);
+        f
+    }
+    pub fn equity<'a>(&'a self, train:bool, evaluator: &'a impl FitnessEvaluator) -> Vec<f32>{
+        let func = self.translate();
+        let f = evaluator.equity(train,func);
         f
     }
     fn first_pass(&self, p:usize) {

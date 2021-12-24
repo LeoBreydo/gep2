@@ -1,3 +1,56 @@
+use crate::data_table::DataTable;
+
 pub trait FitnessEvaluator {
-    fn evaluate(&self, func: Box<dyn Fn(&Vec<f32>) -> f32>) -> f32;
+    fn evaluate<'a>(&self, func: Box<dyn Fn(&Vec<f32>) -> f32 +'a>) -> f32;
+    fn equity<'a>(&self, train:bool, func: Box<dyn Fn(&Vec<f32>) -> f32 +'a>) -> Vec<f32>;
 }
+
+pub struct FitnessFunction{
+    data_table:DataTable,
+    end_of_train_data:usize,
+    perfect_equity:f32
+}
+
+impl FitnessFunction{
+    pub fn new(a:Vec<Vec<f32>>,r:Vec<f32>, train_fraction:f32) -> Self{
+        let mut e = 0.0f32;
+        let end_of_train_data = ((r.len() as f32)*train_fraction) as usize;
+        for i in 0..end_of_train_data{
+            e += r[i].abs()
+        }
+        let data_table = DataTable::new(a,r).unwrap();
+        FitnessFunction{data_table,end_of_train_data, perfect_equity:e}
+    }
+}
+impl FitnessEvaluator for FitnessFunction {
+    fn evaluate<'a>(&self, func: Box<dyn Fn(&Vec<f32>) -> f32 +'a>) -> f32 {
+        let mut res = 0.0f32;
+        for i in 0..self.end_of_train_data {
+            let row = self.data_table.get_data_row(i).unwrap();
+            let signal = func(row.0);
+            if signal*row.1 > 0.0 {res += row.1.abs()}
+        };
+        if res > 0.0 {res/self.perfect_equity} else {0.0}
+    }
+
+    fn equity<'a>(&self, train: bool, func: Box<dyn Fn(&Vec<f32>) -> f32 + 'a>) -> Vec<f32> {
+        let mut ret = Vec::new();
+        let mut res = 0.0f32;
+        if train{
+            for i in 0..self.end_of_train_data {
+                let row = self.data_table.get_data_row(i).unwrap();
+                res += func(row.0)*row.1;
+                ret.push(res);
+            }
+        }
+        else{
+            for i in self.end_of_train_data..self.data_table.rows {
+                let row = self.data_table.get_data_row(i).unwrap();
+                res += func(row.0) * row.1;
+                ret.push(res);
+            }
+        }
+        ret
+    }
+}
+
