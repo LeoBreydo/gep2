@@ -13,7 +13,7 @@ pub fn ne(x: f32, _y: f32) -> f32{
     -x
 }
 
-pub const REGISTRY: &'static [FunctionDescription] = &[
+pub const FREGISTRY: &'static [FunctionDescription] = &[
     FunctionDescription {
         arity: 2,
         op: f32::min,
@@ -55,19 +55,19 @@ mod tests {
 
     #[test]
     fn registry_length_test() {
-        assert_eq!(REGISTRY.len(), FN_NUM);
+        assert_eq!(FREGISTRY.len(), FN_NUM);
     }
     #[test]
     fn registry_mi_test() {
-        assert_eq!((REGISTRY[0].op)(1.0,-1.0), -1.0);
+        assert_eq!((FREGISTRY[0].op)(1.0, -1.0), -1.0);
     }
     #[test]
     fn registry_ne_test() {
-        assert_eq!((REGISTRY[FN_NUM-1].op)(1.0,1.0), -1.0);
+        assert_eq!((FREGISTRY[FN_NUM-1].op)(1.0, 1.0), -1.0);
     }
     #[test]
     fn registry_av_test() {
-        assert_eq!((REGISTRY[FN_NUM-2].op)(1.0,-1.0), 0.0);
+        assert_eq!((FREGISTRY[FN_NUM-2].op)(1.0, -1.0), 0.0);
     }
 
 }

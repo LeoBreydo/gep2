@@ -2,11 +2,11 @@ use std::cell::Cell;
 use rand::prelude::ThreadRng;
 use rand::Rng;
 use crate::codons::Codon;
-use crate::fitness_evaluator::FitnessEvaluator;
-use crate::functions::{FN_NUM, Function, REGISTRY};
 use crate::linking_function::LF;
-use crate::state_functions::{Collector, Delay, Diff, SFN_NUM};
+use crate::functions::{FN_NUM, Function, FREGISTRY};
+use crate::state_functions::{SFN_NUM, StateFunction, SFREGISTRY};
 use crate::terminal::Terminal;
+use crate::fitness_evaluator::FitnessEvaluator;
 
 pub struct Chromosome {
     head_size:usize,
@@ -54,16 +54,8 @@ impl Chromosome{
     }
     fn create_non_terminal(rng: &mut ThreadRng) -> Codon {
         let i = rng.gen::<usize>() % (FN_NUM + SFN_NUM);
-        let c = if i < 4 {
-            Codon::Function(Function::new(&(REGISTRY[i])))
-        } else {
-            match i {
-                4 => Codon::Delay(Delay::new()),
-                5 => Codon::Collector(Collector::new()),
-                _ => Codon::Diff(Diff::new())
-            }
-        };
-        c
+        if i < 4 { Codon::Function(Function::new(&(FREGISTRY[i]))) }
+        else { Codon::StateFunction(StateFunction::new(&(SFREGISTRY[i-4]))) }
     }
 
     pub fn copy_to_new_generation(&self) ->Chromosome{

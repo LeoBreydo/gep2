@@ -13,16 +13,20 @@ use gep2_lib::population::Population;
 fn main() {
     let v = read_data();
     let inputs_cnt = 5;
-    let mut long_results = Vec::with_capacity(v.len()-1-inputs_cnt);
-    for i in inputs_cnt+1..v.len(){
-        long_results.push(v[i] - v[i-1])
-    }
-    let mut inputs = Vec::with_capacity(v.len()-1-inputs_cnt);
-    for i in 1..v.len()-1{
-        inputs.push((v[i] - v[i-1]).signum())
-    }
-    let m = get_matrix(&inputs,inputs_cnt);
-    let fe = FitnessFunction::new(m,long_results,0.75);
+    let mut deltas = Vec::with_capacity(v.len()-1);
+    for i in 1..v.len(){ deltas.push(v[i] - v[i-1]) }
+    let fe = get_fitness_function(deltas,inputs_cnt,0.75);
+
+    // let mut long_results = Vec::with_capacity(v.len()-1-inputs_cnt);
+    // for i in inputs_cnt+1..v.len(){
+    //     long_results.push(v[i] - v[i-1])
+    // }
+    // let mut inputs = Vec::with_capacity(v.len()-1-inputs_cnt);
+    // for i in 1..v.len()-1{
+    //     inputs.push((v[i] - v[i-1]).signum())
+    // }
+    // let m = get_matrix(&inputs,inputs_cnt);
+    // let fe = FitnessFunction::new(m,long_results,0.75);
 
     let p = &mut Population::new(30,5, 7, inputs_cnt, 0.4, 0.3);
     let passes = 80;
@@ -45,38 +49,6 @@ fn main() {
     for i in 0..test_equity.len() {
         writeln!(&mut f, "{},", test_equity[i]).unwrap();
     }
-
-    // let mut chr: Vec<Chromosome> = Vec::with_capacity(2);
-    // chr.push(Chromosome::new(&mut rg,3,3,5));
-    // chr.push(Chromosome::new(&mut rg,3,3,5));
-    // dbg!(&chr[0].k_string());
-    // dbg!(&chr[1].k_string());
-    // Chromosome::two_points_crossover(&mut chr, 0, 1, &mut rg);
-    // dbg!(&chr[0].k_string());
-    // dbg!(&chr[1].k_string());
-
-    // let chromosome = Chromosome::new(&mut rg,3,3,5);
-    // dbg!(chromosome.k_string());
-    //
-    // let mut chromosome = chromosome.mutation(&mut rg,5,0.14);
-    // dbg!(chromosome.k_string());
-    //
-    // chromosome.root_transposition(&mut rg, 1.0);
-    // dbg!(chromosome.k_string());
-}
-
-fn get_matrix(inputs:&Vec<f32>, columns:usize) -> Vec<Vec<f32>>{
-    let len = inputs.len();
-    let start = columns;
-    let mut v = Vec::new();
-    for i in start..len+1{
-       let mut vv = Vec::with_capacity(columns);
-        for j in i-columns..i{
-            vv.push(inputs[j])
-        }
-        v.push(vv)
-    }
-    v
 }
 
 pub fn read_data()->Vec<f32>{
@@ -92,8 +64,38 @@ pub fn read_data()->Vec<f32>{
     data
 }
 
-fn read_lines<P>(filename: P) -> io::Result<io::Lines<io::BufReader<File>>>
-    where P: AsRef<Path>, {
+fn read_lines<P>(filename: P) -> io::Result<io::Lines<io::BufReader<File>>> where P: AsRef<Path> {
     let file = File::open(filename)?;
     Ok(io::BufReader::new(file).lines())
 }
+
+fn get_fitness_function(deltas:Vec<f32>, inputs_cnt:usize, train_fraction:f32) -> FitnessFunction{
+    let len = deltas.len();
+    let mut matrix = Vec::with_capacity(len- inputs_cnt -1);
+    let mut long_results = Vec::with_capacity(len- inputs_cnt -1);
+    for i in inputs_cnt..len{
+       let mut row = Vec::with_capacity(inputs_cnt);
+        for j in i- inputs_cnt..i{
+            row.push(deltas[j].signum())
+        }
+        long_results.push(deltas[i]);
+        matrix.push(row);
+    }
+    FitnessFunction::new(matrix,long_results,train_fraction)
+}
+
+// fn get_matrix(inputs:&Vec<f32>, columns:usize) -> Vec<Vec<f32>>{
+//     let len = inputs.len();
+//     let start = columns;
+//     let mut v = Vec::new();
+//     for i in start..len+1{
+//        let mut vv = Vec::with_capacity(columns);
+//         for j in i-columns..i{
+//             vv.push(inputs[j])
+//         }
+//         v.push(vv)
+//     }
+//     v
+// }
+
+
