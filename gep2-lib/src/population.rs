@@ -53,7 +53,7 @@ impl Population{
 
     pub fn search<'a>(&'a mut self, fe: &'a impl FitnessEvaluator, g:usize) -> Vec<(f32, f32, String, usize)>{
         let mut stat: Vec<(f32,f32, String, usize)> = Vec::with_capacity(g);
-        let mut r : Option<(f32,f32, String, usize)> = None;
+        let mut r : Option<(f32,f32, String, usize)>;
         // initialization
         loop {
             r = self.evaluate(fe);

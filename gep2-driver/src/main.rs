@@ -1,15 +1,21 @@
-use std::fs::read_to_string;
 use serde::Deserialize;
-use std::{f32, fs, io};
-use std::fs::File;
-use rand::prelude::ThreadRng;
-use rand::Rng;
-use std::io::{BufRead, Write};
-use std::path::Path;
-use gep2_lib::chromosome::Chromosome;
-use gep2_lib::fitness_evaluator;
-use gep2_lib::fitness_evaluator::{FitnessEvaluator, FitnessFunction};
-use gep2_lib::population::Population;
+use std::{
+    fs::{
+        read_to_string,
+        File
+    },
+    f32,
+    io::{
+        self,
+        BufRead,
+        Write
+    },
+    path::Path
+};
+use gep2_lib::{
+    fitness_evaluator::FitnessFunction,
+    population::Population
+};
 
 #[derive(Deserialize)]
 struct Config {
@@ -89,18 +95,5 @@ fn get_fitness_function(deltas:Vec<f32>, inputs_cnt:usize, train_fraction:f32) -
     FitnessFunction::new(matrix,long_results,train_fraction)
 }
 
-// fn get_matrix(inputs:&Vec<f32>, columns:usize) -> Vec<Vec<f32>>{
-//     let len = inputs.len();
-//     let start = columns;
-//     let mut v = Vec::new();
-//     for i in start..len+1{
-//        let mut vv = Vec::with_capacity(columns);
-//         for j in i-columns..i{
-//             vv.push(inputs[j])
-//         }
-//         v.push(vv)
-//     }
-//     v
-// }
 
 
