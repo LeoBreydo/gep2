@@ -1,3 +1,5 @@
+use std::fs::read_to_string;
+use serde::Deserialize;
 use std::{f32, fs, io};
 use std::fs::File;
 use rand::prelude::ThreadRng;
@@ -9,28 +11,31 @@ use gep2_lib::fitness_evaluator;
 use gep2_lib::fitness_evaluator::{FitnessEvaluator, FitnessFunction};
 use gep2_lib::population::Population;
 
+#[derive(Deserialize)]
+struct Config {
+    inputs_cnt: usize,
+    population_size: usize,
+    nbr_of_genes: usize,
+    head_length: usize,
+    transposition_probability: f32,
+    mutation_probability: f32,
+    passes: usize,
+    train_fraction: f32
+}
 
 fn main() {
+    let toml_config_str = read_to_string("./driver_config.toml").unwrap();
+    let config: Config = toml::from_str(&toml_config_str).unwrap();
+
     let v = read_data();
-    let inputs_cnt = 5;
     let mut deltas = Vec::with_capacity(v.len()-1);
     for i in 1..v.len(){ deltas.push(v[i] - v[i-1]) }
-    let fe = get_fitness_function(deltas,inputs_cnt,0.75);
+    let fe = get_fitness_function(deltas, config.inputs_cnt, config.train_fraction);
 
-    // let mut long_results = Vec::with_capacity(v.len()-1-inputs_cnt);
-    // for i in inputs_cnt+1..v.len(){
-    //     long_results.push(v[i] - v[i-1])
-    // }
-    // let mut inputs = Vec::with_capacity(v.len()-1-inputs_cnt);
-    // for i in 1..v.len()-1{
-    //     inputs.push((v[i] - v[i-1]).signum())
-    // }
-    // let m = get_matrix(&inputs,inputs_cnt);
-    // let fe = FitnessFunction::new(m,long_results,0.75);
-
-    let p = &mut Population::new(30,5, 7, inputs_cnt, 0.4, 0.3);
-    let passes = 80;
-    let stat = &p.search(&fe,passes);
+    let p = &mut Population::new(config.population_size, config.nbr_of_genes, config.head_length,
+                                 config.inputs_cnt,
+                                 config.transposition_probability, config.mutation_probability);
+    let stat = &p.search(&fe,config.passes);
     for i in 0..stat.len(){
         println!("({}) - max. fitness : {}, avg. fitness : {}", i+1, stat[i].0, stat[i].1);
     }
@@ -40,12 +45,12 @@ fn main() {
     let train_equity = chr.equity(true, &fe);
     let test_equity = chr.equity(false, &fe);
 
-    let mut f = File::create("train_eqt").expect("Unable to create file");
+    let mut f = File::create("train_eqt.txt").expect("Unable to create file");
     for i in 0..train_equity.len() {
         writeln!(&mut f, "{},", train_equity[i]).unwrap();
     }
 
-    let mut f = File::create("test_eqt").expect("Unable to create file");
+    let mut f = File::create("test_eqt.txt").expect("Unable to create file");
     for i in 0..test_equity.len() {
         writeln!(&mut f, "{},", test_equity[i]).unwrap();
     }

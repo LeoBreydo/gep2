@@ -1,0 +1,8 @@
+inputs_cnt = 5
+population_size = 30
+nbr_of_genes = 5
+head_length = 7
+transposition_probability = 0.4
+mutation_probability = 0.3
+passes = 80
+train_fraction = 0.75
