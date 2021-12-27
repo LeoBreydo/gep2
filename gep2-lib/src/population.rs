@@ -1,3 +1,6 @@
+extern crate pbr;
+use pbr::ProgressBar;
+
 use rand::prelude::ThreadRng;
 use rand::Rng;
 use crate::chromosome::Chromosome;
@@ -65,12 +68,17 @@ impl Population{
         }
         stat.push(r.unwrap());
 
+        let mut pb = ProgressBar::new(g as u64);
+        pb.format("╢▌▌░╟");
         // gp-search
         for i in 0..g {
+            pb.inc();
             self.update();
             stat.push(self.evaluate(fe).unwrap());
             if stat[i+1].0 > 0.95 {break}
+            //progress bar
         }
+        pb.finish_print("done");
         stat
     }
 

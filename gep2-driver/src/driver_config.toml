@@ -6,3 +6,4 @@ transposition_probability = 0.4
 mutation_probability = 0.3
 passes = 80
 train_fraction = 0.75
+data_path = "./data.txt"

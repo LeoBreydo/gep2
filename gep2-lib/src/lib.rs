@@ -8,3 +8,5 @@ mod linking_function;
 pub mod fitness_evaluator;
 mod data_table;
 pub mod population;
+pub mod statistics;
+pub mod config;
