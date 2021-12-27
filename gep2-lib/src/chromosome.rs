@@ -67,7 +67,6 @@ impl Chromosome{
         Chromosome { head_size: self.head_size, nbr_of_genes: self.nbr_of_genes, codons, fitness:Cell::new(0.0) }
     }
 
-
     // helpers
     pub fn k_string(&self) ->String{
         let len = self.head_size*2+1;
