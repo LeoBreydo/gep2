@@ -2,6 +2,8 @@ use std::cell::Cell;
 use rand::prelude::ThreadRng;
 use rand::Rng;
 use crate::codons::Codon;
+use crate::delay_line::DelayLine;
+use crate::feedback::Feedback;
 use crate::linking_function::LF;
 use crate::functions::{FN_NUM, Function, FREGISTRY};
 use crate::state_functions::{SFN_NUM, StateFunction, SFREGISTRY};
@@ -18,36 +20,45 @@ pub struct Chromosome {
 }
 impl Chromosome{
     // initialization
-    pub fn new(mut rng: &mut ThreadRng, mut gene_nbr:usize, mut head_length: usize, mut args_nbr:usize) -> Self{
+    pub fn new(mut rng: &mut ThreadRng, mut gene_nbr:usize, mut head_length: usize, mut args_nbr:usize, max_delay: usize) -> Self{
         if gene_nbr < 1 { gene_nbr = 1}
         if head_length < 1 { head_length = 1}
         if args_nbr < 1 { args_nbr = 1}
 
         let gl = 2* head_length + 1;
         let mut codons: Vec<Codon> = Vec::with_capacity(gene_nbr *gl);
-        Self::initialize_codons(&mut rng, &mut codons, gene_nbr, head_length, args_nbr);
+        Self::initialize_codons(&mut rng, &mut codons, gene_nbr, head_length, args_nbr, max_delay);
         Chromosome { codons, head_size: head_length, nbr_of_genes: gene_nbr, fitness:Cell::new(0.0) }
     }
-    fn initialize_codons(mut rng: &mut ThreadRng, arr: &mut Vec<Codon>, gn:usize, hl:usize, na:usize){
+    fn initialize_codons(mut rng: &mut ThreadRng, arr: &mut Vec<Codon>, gn:usize, hl:usize, na:usize, md: usize){
         let gl = 2*hl+1;
         for i in 0..gn{
             let start = i*gl;
             // first codon in gene must be non-terminal
             arr.push(Self::create_non_terminal(rng));
             for _j in start+1..start+hl{
-                Self::push_head_codon(&mut rng, arr, na);
+                Self::push_head_codon(&mut rng, arr, na, md);
             }
             for _j in start+hl..start+gl{
-                arr.push(Codon::Terminal(Terminal::new(rng.gen::<usize>() % na)));
+                let r = if md > 0 {rng.gen::<usize>() % 4} else {rng.gen::<usize>() % 3};
+                if r < 3 {
+                    arr.push(Codon::Terminal(Terminal::new(rng.gen::<usize>() % na)))
+                } else {
+                    arr.push(Codon::Feedback(Feedback::new(rng.gen::<usize>() % md)))
+                }
+
             }
         }
     }
-    fn push_head_codon(rng: &mut ThreadRng, arr: &mut Vec<Codon>, na:usize) {
-        let r = rng.gen::<usize>() % 10;
-        if r < 2 {
-            // terminal creation probability is 20%
+    fn push_head_codon(rng: &mut ThreadRng, arr: &mut Vec<Codon>, na:usize, md: usize) {
+        let r = rng.gen::<usize>() % 20;
+        let k = if md > 0 {3} else {4};
+        if r < k {
             arr.push(Codon::Terminal(Terminal::new(rng.gen::<usize>() % na)));
-        } else {
+        } else if r < 4{
+            arr.push(Codon::Feedback(Feedback::new(rng.gen::<usize>() % md)));
+        }
+        else {
             let c = Self::create_non_terminal(rng);
             arr.push(c);
         }
@@ -79,6 +90,7 @@ impl Chromosome{
                 let c = &self.codons[j];
                 match c {
                     Codon::Terminal(ref t) => ret.push_str(&t.i.to_string()),
+                    Codon::Feedback(ref f) => ret.push_str(&*format!("z({})", f.i.to_string())),
                     _ => ret.push_str(&c.get_symbol())
                 }
                 ret.push('|');
@@ -89,7 +101,7 @@ impl Chromosome{
     }
 
     // genetic operations
-    pub fn mutation(&self, rng: &mut ThreadRng, args_nbr:usize, codon_mutation_probability: f32) -> Chromosome{
+    pub fn mutation(&self, rng: &mut ThreadRng, args_nbr:usize, md:usize, codon_mutation_probability: f32) -> Chromosome{
         let glen = self.head_size*2+1;
         // codons for mutated chromosome
         let mut codons: Vec<Codon> = Vec::with_capacity(self.codons.len());
@@ -105,10 +117,14 @@ impl Chromosome{
             // mutate rest of head
             for j in start+1..start + self.head_size {
                 if rng.gen_range(0.0..1.0) < codon_mutation_probability{
-                    let r = rng.gen::<usize>() % 10;
-                    if r < 2 {
+                    let r = rng.gen::<usize>() % 20;
+                    let k = if md > 0 {3} else {4};
+                    if r < k {
                         codons.push(Codon::Terminal(Terminal::new(rng.gen::<usize>() % args_nbr)));
-                    } else {
+                    }else if r < 4 {
+                        codons.push(Codon::Feedback(Feedback::new(rng.gen::<usize>() % md)));
+                    }
+                    else {
                         codons.push(Self::create_non_terminal(rng));
                     }
                 }
@@ -119,7 +135,13 @@ impl Chromosome{
             //mutate tail
             for j in start + self.head_size..start + glen {
                 if rng.gen_range(0.0..1.0) < codon_mutation_probability{
-                    codons.push(Codon::Terminal(Terminal::new(rng.gen::<usize>() % args_nbr)));
+                    let r = rng.gen::<usize>() % 4;
+                    let k = if md > 0{3} else {4};
+                    if r < k {
+                        codons.push(Codon::Terminal(Terminal::new(rng.gen::<usize>() % args_nbr)));
+                    } else {
+                        codons.push(Codon::Feedback(Feedback::new(rng.gen::<usize>() % md)));
+                    }
                 }
                 else{
                     codons.push(self.codons[j].clone());
@@ -148,6 +170,7 @@ impl Chromosome{
         loop{
             match self.codons[starting_point]{
                 Codon::Terminal(ref _t) => starting_point += 1,
+                Codon::Feedback(ref _f) => starting_point += 1,
                 _ => break,
             }
             // only terminals found -> no transposition
@@ -190,7 +213,7 @@ impl Chromosome{
     }
 
     // translation/execution
-    pub fn translate<'a>(&'a self) -> Box<dyn Fn(&Vec<f32>) -> f32 + 'a>{
+    pub fn translate<'a>(&'a self) -> Box<dyn Fn(&Vec<f32>, &DelayLine) -> f32 + 'a>{
         let glen = 2*self.head_size+1;
         let cnt = self.nbr_of_genes;
         let mut idx = 0;
@@ -199,30 +222,30 @@ impl Chromosome{
             self.first_pass(idx);
             idx += glen;
         }
-        let mut results: Vec<Box<dyn Fn(&Vec<f32>) -> f32>> = Vec::with_capacity(cnt);
+        let mut results: Vec<Box<dyn Fn(&Vec<f32>,&DelayLine) -> f32>> = Vec::with_capacity(cnt);
         // second pass
         idx = 0;
         for _i in 0..cnt{
             results.push(self.second_pass(idx));
             idx += glen;
         }
-        Box::new(move |args| {
+        Box::new(move |args, delay_line| {
             let mut v :Vec<f32> = Vec::with_capacity(cnt);
             for i in 0..cnt{
-                v.push((results[i])(args))
+                v.push((results[i])(args,delay_line))
             }
             LF.evaluate(v)
         })
     }
-    pub fn pass<'a>(&'a self, evaluator: &'a impl FitnessEvaluator) -> f32{
+    pub fn pass<'a>(&'a self, max_delay:usize, evaluator: &'a impl FitnessEvaluator) -> f32{
         let func = self.translate();
-        let f = evaluator.evaluate(func);
+        let f = evaluator.evaluate(max_delay, func);
         self.fitness.set(f);
         f
     }
-    pub fn equity<'a>(&'a self, train:bool, evaluator: &'a impl FitnessEvaluator) -> Vec<f32>{
+    pub fn equity<'a>(&'a self, max_delay: usize,  train:bool, evaluator: &'a impl FitnessEvaluator) -> Vec<f32>{
         let func = self.translate();
-        let f = evaluator.equity(train,func);
+        let f = evaluator.equity(max_delay, train,func);
         f
     }
     fn first_pass(&self, p:usize) {
@@ -238,20 +261,21 @@ impl Chromosome{
             }
         };
     }
-    fn second_pass<'a>(&'a self, pos: usize) -> Box<dyn Fn(&Vec<f32>) -> f32 + 'a> {
+    fn second_pass<'a>(&'a self, pos: usize) -> Box<dyn Fn(&Vec<f32>, &DelayLine) -> f32 + 'a> {
         let c = &self.codons[pos];
         return match c {
-            Codon::Terminal(ref _t) => Box::new(move |args| c.evaluate(0.0, 0.0, args)),
+            Codon::Terminal(ref _t) => Box::new(move |args, delay_line| c.evaluate(0.0, 0.0, args, delay_line)),
+            Codon::Feedback(ref _f) => Box::new(move |args, delay_line| c.evaluate(0.0, 0.0, args, delay_line)),
             _ => {
                 if c.get_arity() == 1{
-                    Box::new(move |args|
-                        c.evaluate(self.second_pass(c.get_first_arg_position())(args),
-                            0.0, args))
+                    Box::new(move |args, delay_line|
+                        c.evaluate(self.second_pass(c.get_first_arg_position())(args,delay_line),
+                            0.0, args, delay_line))
                 }
                 else{
-                    Box::new(move |args|
-                        c.evaluate(self.second_pass(c.get_first_arg_position())(args),
-                            self.second_pass(c.get_first_arg_position() +1)(args), args))
+                    Box::new(move |args, delay_line|
+                        c.evaluate(self.second_pass(c.get_first_arg_position())(args, delay_line),
+                            self.second_pass(c.get_first_arg_position() +1)(args, delay_line), args, delay_line))
                 }
             }
         };

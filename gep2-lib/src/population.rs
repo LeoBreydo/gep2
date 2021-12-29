@@ -13,13 +13,14 @@ pub struct Population {
     pub gene_nbr:usize,
     pub hl:usize,
     pub num_args:usize,
+    pub max_delay: usize,
     denominator: f32,
     transposition_probability: f32, // def. val. 0.3
     mutation_probability: f32, // def. val. 0.2
 }
 
 impl Population{
-    pub fn new(mut size:usize,gn:usize, mut hl:usize, mut num_args:usize,
+    pub fn new(mut size:usize,gn:usize, mut hl:usize, mut num_args:usize, max_delay: usize,
                mut transposition_probability : f32,
                mut mutation_probability : f32) -> Self{
         if num_args == 0 {num_args = 1}
@@ -30,7 +31,7 @@ impl Population{
         let mut chr: Vec<Chromosome> = Vec::with_capacity(size);
         for _i in 0..size{
             d += 1.0;
-            chr.push(Chromosome::new(&mut rg, gn, hl, num_args))
+            chr.push(Chromosome::new(&mut rg, gn, hl, num_args, max_delay))
         }
         if transposition_probability > 1.0 {
             transposition_probability = 1.0;
@@ -48,6 +49,7 @@ impl Population{
             gene_nbr:gn,
             hl,
             num_args,
+            max_delay,
             denominator:d,
             transposition_probability,
             mutation_probability
@@ -63,7 +65,7 @@ impl Population{
             if r != None {break}
             // total fitness is about zero - reinitialize
             for i in 0..self.size{
-                self.chromosomes[i] = Chromosome::new(&mut self.rng, self.gene_nbr,  self.hl, self.num_args);
+                self.chromosomes[i] = Chromosome::new(&mut self.rng, self.gene_nbr,  self.hl, self.num_args, self.max_delay);
             }
         }
         stat.push(r.unwrap());
@@ -89,7 +91,7 @@ impl Population{
         let mut ii = 0;
         let mut i = 0;
         for chr in  & self.chromosomes{
-            let f = chr.pass(fe);
+            let f = chr.pass(self.max_delay,fe);
             if f > mf{
                 mf = f;
                 ii = i;
@@ -116,7 +118,7 @@ impl Population{
             for ii in 0..wheel.len() {
                 if test < wheel[ii] {
                     if self.mutation_probability > 0.0 {
-                        next_generation.push(self.chromosomes[wheel_ids[ii]].mutation(&mut self.rng, self.num_args, self.mutation_probability));
+                        next_generation.push(self.chromosomes[wheel_ids[ii]].mutation(&mut self.rng, self.num_args, self.max_delay, self.mutation_probability));
                     }
                     else{
                         next_generation.push(self.chromosomes[wheel_ids[ii]].copy_to_new_generation());

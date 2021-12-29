@@ -17,18 +17,18 @@ use chrono::prelude::*;
 fn main() {
     // setup
     let toml_config_str = read_to_string("./driver_config.toml").unwrap();
-    let config: Config = toml::from_str(&toml_config_str).unwrap();
+    let conf: Config = toml::from_str(&toml_config_str).unwrap();
 
-    let v = read_data(config.data_path);
+    let v = read_data(conf.data_path);
     let mut deltas = Vec::with_capacity(v.len()-1);
     for i in 1..v.len(){ deltas.push(v[i] - v[i-1]) }
-    let fe = get_fitness_function(deltas, config.inputs_cnt, config.train_fraction);
+    let fe = get_fitness_function(deltas, conf.inputs_cnt, conf.train_fraction);
 
-    let p = &mut Population::new(config.population_size, config.nbr_of_genes, config.head_length,
-                                 config.inputs_cnt,
-                                 config.transposition_probability, config.mutation_probability);
+    let p = &mut Population::new(conf.population_size, conf.nbr_of_genes, conf.head_length,
+                                 conf.inputs_cnt, conf.max_delay,
+                                 conf.transposition_probability, conf.mutation_probability);
     // search
-    let stat = &p.search(&fe,config.passes);
+    let stat = &p.search(&fe, conf.passes);
     for i in 0..stat.len(){
         println!("({}) - max. fitness : {}, avg. fitness : {}", i+1, stat[i].0, stat[i].1);
     }
@@ -41,9 +41,9 @@ fn main() {
 fn save_results(fe: &FitnessFunction, p: &mut Population, stat: &Vec<(f32, f32, String, usize)>) {
     const DATE_FORMAT_STR: &'static str = "%Y%m%d%H%M%S";
     let chr = &p.chromosomes[stat[stat.len() - 1].3];
-    let train_equity = chr.equity(true, fe);
+    let train_equity = chr.equity(p.max_delay, true, fe);
     let train_stat = Statistics::new(&train_equity);
-    let test_equity = chr.equity(false, fe);
+    let test_equity = chr.equity(p.max_delay, false, fe);
     let test_stat = Statistics::new(&test_equity);
 
     let path = format!("./results_{}", Utc::now().format(DATE_FORMAT_STR).to_string());
@@ -63,6 +63,8 @@ fn save_results(fe: &FitnessFunction, p: &mut Population, stat: &Vec<(f32, f32, 
     let mut f = File::create(format!("{}/{}", path, "test_stat.txt")).expect("Unable to create file");
     let toml = toml::to_string(&test_stat).unwrap();
     write!(&mut f, "{}", toml);
+
+    fs::copy("./driver_config.toml", format!("{}/{}", path, "driver_config.toml"));
 }
 
 pub fn read_data(path: String)->Vec<f32>{

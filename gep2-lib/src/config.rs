@@ -10,5 +10,6 @@ pub struct Config {
     pub mutation_probability: f32,
     pub passes: usize,
     pub train_fraction: f32,
+    pub max_delay: usize,
     pub data_path: String
 }
